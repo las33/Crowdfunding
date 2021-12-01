@@ -34,9 +34,9 @@ def return_model_by_name(model_name, pool, k, IH_rate=0):
     #    return OLP(k=k,ds_tech=ds_tech,IH_rate=IH_rate)
 
 
-def cross_validation_model(X_train, y_train, X_test, y_test, model_name, pool, k, ds_tech=0, IH_rate=0):
+def cross_validation_model(X_train, y_train, X_test, y_test, model_name, pool, k, IH_rate=0):
 
-    model = return_model_by_name(model_name, pool, k, ds_tech, IH_rate)
+    model = return_model_by_name(model_name, pool, k, IH_rate)
     #print(model, model_name)
     model.fit(X_train, y_train)
     pred = model.predict(X_test)
@@ -46,7 +46,7 @@ def cross_validation_model(X_train, y_train, X_test, y_test, model_name, pool, k
     return acc, roc
 
 
-def simple_gridSearch(model_name, pool, X_train, y_train, X_test, y_test):
+def simple_gridSearch(model_name, pool_list, X_train, y_train, X_test, y_test):
 
     best_acc = 0
     best_roc = 0
@@ -55,26 +55,28 @@ def simple_gridSearch(model_name, pool, X_train, y_train, X_test, y_test):
     best_pool = None
     list_k = [3, 7, 5, 9, 13]
     n_estimators_list = [10, 20, 30, 50, 70, 100]
+    IH_rate_list = [0.0, 0.1, 0.2, 0.3, 0.5]
 
-    if(model_name == "METADES" or model_name == "KNORAU"or model_name == "KNORAE"):
-        IH_rate_list = [0.0, 0.1, 0.2, 0.3, 0.5, 0.7, 1.0]
+    if(model_name == "METADES" or model_name == "KNORAU"or model_name == "KNORAE"):        
         best_ds_tech = ''
         best_ihrate = 0.0
         for k in list_k:
             for IH_rate in IH_rate_list:
                 for n in n_estimators_list:
-                    pool_p = BaggingClassifier(
-                        base_estimator=pool, n_estimators=n)
-                    pool_p.fit(X_train, y_train)
-                    acc, roc = cross_validation_model(
-                        X_train, y_train, X_test, y_test, model_name, pool_p, k, IH_rate)
-                    if(roc >= best_roc):
-                        if(acc > best_acc):
-                            best_acc = acc
-                            best_roc = roc
-                            best_k = k
-                            best_ihrate = IH_rate
-                            best_pool = pool_p
+                    for pool in pool_list:
+                        pool_p = BaggingClassifier(
+                            base_estimator=pool, n_estimators=n)
+                        pool_p.fit(X_train, y_train)
+                        acc, roc = cross_validation_model(
+                            X_train, y_train, X_test, y_test, model_name, pool_p, k, IH_rate)
+                        if(roc >= best_roc):
+                            if(acc > best_acc):
+                                best_acc = acc
+                                best_roc = roc
+                                best_k = k
+                                best_ihrate = IH_rate
+                                best_pool = pool_p        
+            
         return return_model_by_name(model_name, best_pool, best_k, best_ihrate)
 
     if(model_name != "SingleBest" and model_name != "StaticSelection"):
